@@ -1,0 +1,57 @@
+mode: both
+universe_file: tickers.txt
+max_symbols: 200
+
+data:
+  daily_period: 5y
+  intraday_period: 60d
+  intraday_interval: 15m
+  market_ticker: ^NSEI
+  min_daily_history: 300
+  min_intraday_bars: 500
+
+model:
+  random_state: 42
+  max_train_rows: 250000
+  folds: 4
+  horizon_bars_intraday: 8
+  horizon_days_btst: 1
+  min_auc: 0.52
+  signal_probability: 0.58
+
+risk:
+  initial_capital: 1000000
+  risk_per_trade: 0.005
+  max_positions: 10
+  max_participation_pct_adv: 5.0
+  min_adv_shares: 100000
+  min_turnover_inr: 10000000
+  regime_high_vol_pct: 0.70
+  regime_low_vol_pct: 0.30
+  high_vol_size_multiplier: 0.50
+  low_vol_size_multiplier: 1.00
+  normal_vol_size_multiplier: 0.80
+  max_gross_exposure: 0.95
+
+execution:
+  stop_mode: ATR
+  stop_atr_mult: 1.5
+  stop_pct: 2.0
+  target_mode: ATR
+  target_atr_mult: 2.0
+  target_pct: 5.0
+  intraday_max_hold_bars: 8
+  btst_exit_next_session: true
+  slippage_bps_per_side: 5.0
+  transaction_cost_bps_per_side: 8.0
+
+backtest:
+  intraday_days: 45
+  btst_days: 756
+  min_trades: 20
+
+output:
+  signal_json: docs/data.json
+  history_json: docs/history.json
+  signals_csv: docs/signals.csv
+  backtest_json: docs/backtest.json
