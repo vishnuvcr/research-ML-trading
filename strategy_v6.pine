@@ -1,0 +1,55 @@
+//@version=6
+strategy("Ensemble 5%+ Alpha Momentum Strategy [v6]", 
+         overlay=true, 
+         initial_capital=100000, 
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=15, 
+         commission_type=strategy.commission.percent, 
+         commission_value=0.03, 
+         slippage=1)
+
+// --- Inputs ---
+i_rsiLen        = input.int(14, "RSI Length", minval=1)
+i_rsiMin        = input.float(48.0, "RSI Minimum Gate", step=0.5)
+i_rsiMax        = input.float(72.0, "RSI Maximum Gate", step=0.5)
+i_atrLen        = input.int(14, "ATR Length", minval=1)
+i_atrMult       = input.float(1.5, "ATR Stop Loss Multiplier", step=0.1)
+i_targetPct     = input.float(5.0, "Target Profit Threshold %", step=0.25)
+i_volMultiplier = input.float(1.2, "Volume Surge Factor", step=0.1)
+i_emaFast       = input.int(9, "Fast EMA", minval=1)
+i_emaSlow       = input.int(21, "Slow EMA", minval=1)
+i_maxHold       = input.int(3, "Max Holding Bars (Time Exit)", minval=1)
+
+// --- Feature Computations ---
+var int entryBar = na
+r = ta.rsi(close, i_rsiLen)
+atrValue = ta.atr(i_atrLen)
+volMa = ta.sma(volume, 20)
+fastEma = ta.ema(close, i_emaFast)
+slowEma = ta.ema(close, i_emaSlow)
+
+// --- High-Specificity Rules ---
+c_trend    = fastEma > slowEma
+c_rsi      = (r >= i_rsiMin) and (r <= i_rsiMax)
+c_volume   = volume >= (volMa * i_volMultiplier)
+c_breakout = close > open and close > ta.highest(high, 5)[1]
+
+longCondition = c_trend and c_rsi and c_volume and c_breakout and strategy.position_size == 0
+
+// --- Order Execution Engine ---
+if (longCondition)
+    entryBar := bar_index
+    stopPrice = close - (atrValue * i_atrMult)
+    targetPrice = close * (1.0 + (i_targetPct / 100.0))
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Bracket Exit", "Long", limit=targetPrice, stop=stopPrice)
+
+// Time Barrier Exit
+if strategy.position_size > 0
+    if (bar_index - entryBar >= i_maxHold)
+        strategy.close("Long", comment="Time Exit")
+
+// --- Plotting & Visual Diagnostics ---
+plot(fastEma, "Fast EMA", color=color.new(#38bdf8, 0), linewidth=1)
+plot(slowEma, "Slow EMA", color=color.new(#f59e0b, 0), linewidth=2)
+plotshape(longCondition, title="Surge Alert", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small, text="SURGE >5%")
