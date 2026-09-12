@@ -74,8 +74,9 @@ class PurgedEmbargoTimeSeriesSplit:
             train_dates = unique_dates[:train_end_idx]
             val_dates = unique_dates[val_start_idx:val_end_idx]
 
-            train_idx = np.where(dates.isin(train_dates))[0]
-            val_idx = np.where(dates.isin(val_dates))[0]
+            # Map unique dates back to original panel indices (bracket-free)
+            train_idx = np.flatnonzero(dates.isin(train_dates))
+            val_idx = np.flatnonzero(dates.isin(val_dates))
 
             if len(train_idx) == 0 or len(val_idx) == 0:
                 continue
@@ -107,7 +108,7 @@ class VolatilityRegimeDetector:
             if nifty is None or len(nifty) < 40:
                 raise ValueError("Insufficient Nifty data")
             if isinstance(nifty.columns, pd.MultiIndex):
-                nifty.columns = [c[0] for c in nifty.columns]
+                nifty.columns = nifty.columns.get_level_values(0)
 
             c = nifty["Close"]
             log_ret = np.log(c / c.shift(1))
@@ -198,7 +199,7 @@ class DataLoader:
             if df is None or len(df) < 150:
                 return None
             if isinstance(df.columns, pd.MultiIndex):
-                df.columns = [c[0] for c in df.columns]
+                df.columns = df.columns.get_level_values(0)
             df = df.dropna().copy()
             df["Ticker"] = ticker
             df["Date"] = df.index
@@ -238,8 +239,8 @@ class FeatureEngineering:
         o = df["Open"]
         v = df["Volume"]
 
-        # Multi-horizon log returns (Fixed syntax)
-        for lag in:
+        # Multi-horizon log returns (Tuple prevents bracket-stripping)
+        for lag in (1, 2, 3, 5, 10, 21):
             df[f"ret_{lag}"] = np.log(c / c.shift(lag))
 
         # Intraday ranges
@@ -280,7 +281,7 @@ class FeatureEngineering:
         ema21 = c.ewm(span=21, adjust=False).mean()
         df["ema_diff_9_21"] = (ema9 - ema21) / c
 
-        # TARGET: Next day's high >= 5.0% above next day's open
+        # Point-in-Time TARGET: Next day's high >= 5.0% above next day's open
         next_open = o.shift(-1)
         next_high = h.shift(-1)
         next_surge_pct = (next_high - next_open) / next_open
@@ -392,7 +393,7 @@ class EnsemblePipeline:
 
     def predict_ensemble(self, X_latest: np.ndarray) -> np.ndarray:
         X_scaled = self.scaler.transform(X_latest)
-        ensemble_prob = np.zeros(X_latest.shape[0])
+        ensemble_prob = np.zeros(len(X_latest))
         total_weight = 0.0
 
         for name, model in self.models.items():
@@ -444,7 +445,8 @@ c_liquid = volume <= (volMa20 * (i_maxParticipation / 100.0 * 20.0))
 c_trend    = fastEma > slowEma
 c_rsiOk    = (r >= i_rsiMin) and (r <= i_rsiMax)
 c_volSurge = volume >= (volMa20 * i_volMultiplier)
-c_breakout = close > open and close > ta.highest(high, 5)
+prevHigh5  = ta.highest(high, 5)
+c_breakout = close > open and close > prevHigh5[1 + 0]
 
 longCondition = c_trend and c_rsiOk and c_volSurge and c_breakout and strategy.position_size == 0
 
