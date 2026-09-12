@@ -4,6 +4,9 @@ max_symbols: 200
 
 data:
   daily_period: 5y
+  # yfinance intraday is limited to recent history. Keep 60d for live/research snapshots.
+  intraday_source: yfinance
+  intraday_csv_dir: data/intraday
   intraday_period: 60d
   intraday_interval: 15m
   market_ticker: ^NSEI
@@ -17,7 +20,9 @@ model:
   horizon_bars_intraday: 8
   horizon_days_btst: 1
   min_auc: 0.52
+  threshold_mode: validation
   signal_probability: 0.58
+  min_validation_signals: 30
 
 risk:
   initial_capital: 1000000
