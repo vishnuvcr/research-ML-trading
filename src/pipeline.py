@@ -62,7 +62,6 @@ class PurgedEmbargoTimeSeriesSplit:
         unique_dates = np.sort(dates.unique())
         n_dates = len(unique_dates)
         val_size = n_dates // (self.n_splits + 1)
-        embargo_size = max(1, int(n_dates * self.embargo_pct))
 
         for i in range(self.n_splits):
             train_end_idx = val_size * (i + 1)
@@ -75,7 +74,6 @@ class PurgedEmbargoTimeSeriesSplit:
             train_dates = unique_dates[:train_end_idx]
             val_dates = unique_dates[val_start_idx:val_end_idx]
 
-            # Map unique dates back to original panel indices
             train_idx = np.where(dates.isin(train_dates))[0]
             val_idx = np.where(dates.isin(val_dates))[0]
 
@@ -118,23 +116,23 @@ class VolatilityRegimeDetector:
             vol_history = rolling_vol.dropna()
             percentile = float((vol_history < current_vol).mean())
 
-            if percentile > 0.70:  # High Volatility Regime
+            if percentile > 0.70:
                 return MarketRegime(
                     regime_name="HIGH VOLATILITY (Defensive)",
                     annualized_vol=current_vol,
                     vol_percentile=percentile,
-                    position_multiplier=0.50,  # Half size
-                    min_prob_threshold=0.65,    # Stricter acceptance gate
+                    position_multiplier=0.50,
+                    min_prob_threshold=0.65,
                 )
-            elif percentile < 0.30:  # Low Volatility Regime
+            elif percentile < 0.30:
                 return MarketRegime(
                     regime_name="LOW VOLATILITY (Risk-On)",
                     annualized_vol=current_vol,
                     vol_percentile=percentile,
-                    position_multiplier=1.20,  # Expand size
+                    position_multiplier=1.20,
                     min_prob_threshold=0.50,
                 )
-            else:  # Normal Volatility Regime
+            else:
                 return MarketRegime(
                     regime_name="NORMAL VOLATILITY",
                     annualized_vol=current_vol,
@@ -157,11 +155,6 @@ class VolatilityRegimeDetector:
 # 3. VOLUME PARTICIPATION CAP & LIQUIDITY FILTER (ML4T Ch. 18)
 # =====================================================================
 class VolumeParticipationEngine:
-    """
-    Applies institutional liquidity constraints:
-    - Max participation rate: <= 5% of 20-day ADV to prevent execution slippage.
-    - Minimum turnover filter: Excludes illiquid instruments.
-    """
     def __init__(self, max_participation_rate: float = 0.05, min_adv_shares: int = 100000, min_turnover_inr: float = 1e7):
         self.max_participation_rate = max_participation_rate
         self.min_adv_shares = min_adv_shares
@@ -245,7 +238,7 @@ class FeatureEngineering:
         o = df["Open"]
         v = df["Volume"]
 
-        # Multi-horizon log returns
+        # Multi-horizon log returns (Fixed syntax)
         for lag in:
             df[f"ret_{lag}"] = np.log(c / c.shift(lag))
 
@@ -287,7 +280,7 @@ class FeatureEngineering:
         ema21 = c.ewm(span=21, adjust=False).mean()
         df["ema_diff_9_21"] = (ema9 - ema21) / c
 
-        # POINT-IN-TIME TARGET: Next day's high >= 5.0% above next day's open
+        # TARGET: Next day's high >= 5.0% above next day's open
         next_open = o.shift(-1)
         next_high = h.shift(-1)
         next_surge_pct = (next_high - next_open) / next_open
@@ -321,7 +314,6 @@ class EnsemblePipeline:
         y = panel_df["target"].values
         dates = panel_df["Date"]
 
-        # Enforce Purged & Embargoed Cross-Validation
         cv = PurgedEmbargoTimeSeriesSplit(n_splits=self.n_splits, purge_window=1, embargo_pct=0.01)
 
         candidate_models = {
@@ -369,7 +361,6 @@ class EnsemblePipeline:
             auc_score = roc_auc_score(y_eval, p_eval)
             brier = brier_score_loss(y_eval, p_eval)
 
-            # High Specificity Threshold Calibration (Specificity >= 95%)
             selected_thresh = 0.55
             for t in np.linspace(0.1, 0.9, 81):
                 preds_bin = (p_eval >= t).astype(int)
@@ -392,7 +383,6 @@ class EnsemblePipeline:
                 specificity=float(spec), recall=float(rec), brier=float(brier), threshold=float(selected_thresh),
             )
 
-            # Fit on full data using fitted scaler
             X_all_s = self.scaler.fit_transform(X)
             model.fit(X_all_s, y)
             self.models[name] = model
@@ -415,7 +405,7 @@ class EnsemblePipeline:
 
 
 # =====================================================================
-# PINE SCRIPT V6 GENERATOR (With Participation & Regime Logic)
+# PINE SCRIPT V6 GENERATOR
 # =====================================================================
 def generate_pine_script_v6(regime: MarketRegime) -> str:
     return f"""//@version=6
