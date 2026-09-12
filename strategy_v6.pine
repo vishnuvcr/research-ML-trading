@@ -9,24 +9,15 @@ strategy("Ensemble 5%+ Alpha Momentum Strategy [v6 - ML4T]",
          slippage=1)
 
 // --- Inputs ---
-i_rsiLen           = input.int(14, "RSI Length", minval=1)
-i_rsiMin           = input.float(48.0, "RSI Min Confirmation", step=0.5)
-i_rsiMax           = input.float(70.0, "RSI Max (Overbought Cap)", step=0.5)
-i_atrLen           = input.int(14, "ATR Length", minval=1)
-
-// Stop-loss controls
-i_stopMode         = input.string("ATR", "Stop Loss Mode", options=["ATR", "Percent"])
-i_atrMult          = input.float(1.5, "ATR Stop Loss Multiplier", minval=0.1, step=0.1)
-i_stopPct          = input.float(2.0, "Fixed Stop Loss %", minval=0.1, step=0.25)
-
-// Profit-target controls
-i_profitMode       = input.string("Percent", "Profit Target Mode", options=["ATR", "Percent"])
-i_targetAtrMult    = input.float(2.0, "ATR Profit Target Multiplier", minval=0.1, step=0.1)
-i_targetPct        = input.float(5.0, "Fixed Profit Target %", minval=0.1, step=0.25)
-
-i_volMultiplier    = input.float(1.2, "Volume Surge Gate", step=0.1)
-i_maxParticipation = input.float(5.0, "Max Participation % of ADV", step=0.5)
-i_maxHold          = input.int(3, "Max Holding Bars (Time Barrier)", minval=1)
+i_rsiLen          = input.int(14, "RSI Length", minval=1)
+i_rsiMin          = input.float(48.0, "RSI Min Confirmation", step=0.5)
+i_rsiMax          = input.float(70.0, "RSI Max (Overbought Cap)", step=0.5)
+i_atrLen          = input.int(14, "ATR Length", minval=1)
+i_atrMult         = input.float(1.5, "ATR Stop Loss Multiplier", step=0.1)
+i_targetPct       = input.float(5.0, "Target Profit Threshold %", step=0.25)
+i_volMultiplier   = input.float(1.2, "Volume Surge Gate", step=0.1)
+i_maxParticipation= input.float(5.0, "Max Participation % of ADV", step=0.5)
+i_maxHold         = input.int(3, "Max Holding Bars (Time Barrier)", minval=1)
 
 // --- Feature Calculations ---
 var int entryBar = na
@@ -51,14 +42,8 @@ longCondition = c_trend and c_rsiOk and c_volSurge and c_breakout and strategy.p
 // Execution Engine
 if (longCondition)
     entryBar := bar_index
-    float entryPrice = close
-
-    // Stop loss: choose ATR-based or fixed percentage.
-    float stopPrice = i_stopMode == "ATR" ? entryPrice - (atrValue * i_atrMult) : entryPrice * (1.0 - i_stopPct / 100.0)
-
-    // Profit target: choose ATR-based or fixed percentage.
-    float targetPrice = i_profitMode == "ATR" ? entryPrice + (atrValue * i_targetAtrMult) : entryPrice * (1.0 + i_targetPct / 100.0)
-
+    stopPrice = close - (atrValue * i_atrMult)
+    targetPrice = close * (1.0 + (i_targetPct / 100.0))
     strategy.entry("Long", strategy.long)
     strategy.exit("Bracket Exit", "Long", limit=targetPrice, stop=stopPrice)
 
