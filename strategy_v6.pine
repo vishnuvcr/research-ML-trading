@@ -3,21 +3,21 @@ strategy("Ensemble 5%+ Alpha Momentum Strategy [v6 - ML4T]",
          overlay=true, 
          initial_capital=100000, 
          default_qty_type=strategy.percent_of_equity, 
-         default_qty_value=15, 
+         default_qty_value=18.0, 
          commission_type=strategy.commission.percent, 
          commission_value=0.03, 
          slippage=1)
 
 // --- Inputs ---
-i_rsiLen           = input.int(14, "RSI Length", minval=1)
-i_rsiMin           = input.float(48.0, "RSI Min Confirmation", step=0.5)
-i_rsiMax           = input.float(70.0, "RSI Max (Overbought Cap)", step=0.5)
-i_atrLen           = input.int(14, "ATR Length", minval=1)
-i_atrMult          = input.float(1.5, "ATR Stop Loss Multiplier", step=0.1)
-i_targetPct        = input.float(5.0, "Target Profit Threshold %", step=0.25)
-i_volMultiplier    = input.float(1.2, "Volume Surge Gate", step=0.1)
-i_maxParticipation = input.float(5.0, "Max Participation % of ADV", step=0.5)
-i_maxHold          = input.int(3, "Max Holding Bars (Time Barrier)", minval=1)
+i_rsiLen          = input.int(14, "RSI Length", minval=1)
+i_rsiMin          = input.float(48.0, "RSI Min Confirmation", step=0.5)
+i_rsiMax          = input.float(70.0, "RSI Max (Overbought Cap)", step=0.5)
+i_atrLen          = input.int(14, "ATR Length", minval=1)
+i_atrMult         = input.float(1.5, "ATR Stop Loss Multiplier", step=0.1)
+i_targetPct       = input.float(5.0, "Target Profit Threshold %", step=0.25)
+i_volMultiplier   = input.float(1.2, "Volume Surge Gate", step=0.1)
+i_maxParticipation= input.float(5.0, "Max Participation % of ADV", step=0.5)
+i_maxHold         = input.int(3, "Max Holding Bars (Time Barrier)", minval=1)
 
 // --- Feature Calculations ---
 var int entryBar = na
@@ -27,16 +27,17 @@ volMa20 = ta.sma(volume, 20)
 fastEma = ta.ema(close, 9)
 slowEma = ta.ema(close, 21)
 
-// Institutional Volume Participation check (ML4T Ch. 18)
+// Institutional Volume Participation check
 c_liquid = volume <= (volMa20 * (i_maxParticipation / 100.0 * 20.0))
 
-// Multi-Model Momentum Setup
+// Signal Filters
 c_trend    = fastEma > slowEma
 c_rsiOk    = (r >= i_rsiMin) and (r <= i_rsiMax)
 c_volSurge = volume >= (volMa20 * i_volMultiplier)
-c_breakout = close > open and close > ta.highest(high, 5)
+prevHigh5  = ta.highest(high, 5)
+c_breakout = close > open and close > prevHigh5[1 + 0]
 
-longCondition = c_trend and c_rsiOk and c_volSurge and c_breakout and c_liquid and strategy.position_size == 0
+longCondition = c_trend and c_rsiOk and c_volSurge and c_breakout and strategy.position_size == 0
 
 // Execution Engine
 if (longCondition)
@@ -46,12 +47,12 @@ if (longCondition)
     strategy.entry("Long", strategy.long)
     strategy.exit("Bracket Exit", "Long", limit=targetPrice, stop=stopPrice)
 
-// Time Barrier Exit (ML4T Ch. 16)
+// Time Barrier Exit
 if strategy.position_size > 0
     if (bar_index - entryBar >= i_maxHold)
-        strategy.close("Long", comment="Time Barrier Exit")
+        strategy.close("Long", comment="Time Barrier")
 
-// Visual Diagnostics
+// Plotting
 plot(fastEma, "Fast EMA", color=color.new(#38bdf8, 0), linewidth=1)
 plot(slowEma, "Slow EMA", color=color.new(#f59e0b, 0), linewidth=2)
 plotshape(longCondition, title="Surge Alert", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small, text="SURGE >5%")
