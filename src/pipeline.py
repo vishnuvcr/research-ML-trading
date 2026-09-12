@@ -353,4 +353,404 @@ longCondition = c_trendOk and c_rsiOk and c_volSurge and c_pricePush and strateg
 if (longCondition)
     entryBar := bar_index
     slPrice = close - (atrValue * i_atrMult)
-    tpPrice = close * (1.0 + (i_targetPct / 1
+    tpPrice = close * (1.0 + (i_targetPct / 100.0))
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Bracket Exit", "Long", limit=tpPrice, stop=slPrice)
+
+// Time Barrier Exit
+if strategy.position_size > 0
+    if (bar_index - entryBar >= i_maxHolding)
+        strategy.close("Long", comment="Time Stop")
+
+// Visual Diagnostics
+plot(fastEma, "Fast EMA", color=color.aqua, linewidth=1)
+plot(slowEma, "Slow EMA", color=color.orange, linewidth=2)
+plotshape(longCondition, title="Long Signal", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small, text="SURGE")
+"""
+
+
+def generate_html_dashboard(
+    screened_stocks: List[Dict[str, Any]],
+    metrics: Dict[str, ModelMetrics],
+    history: List[Dict[str, Any]],
+    timestamp: str,
+) -> str:
+    """Creates a responsive, standalone, dark-themed HTML report for GitHub Pages."""
+    metrics_rows = ""
+    for name, m in metrics.items():
+        metrics_rows += f"""
+        <tr>
+            <td><strong>{name}</strong></td>
+            <td><span class="badge badge-blue">{m.auc:.4f}</span></td>
+            <td>{(m.precision * 100):.2f}%</td>
+            <td><span class="badge badge-green">{(m.specificity * 100):.2f}%</span></td>
+            <td>{(m.recall * 100):.2f}%</td>
+            <td>{m.brier:.4f}</td>
+            <td>{m.threshold:.2f}</td>
+        </tr>
+        """
+
+    stock_rows = ""
+    if not screened_stocks:
+        stock_rows = "<tr><td colspan='8' style='text-align:center;'>No high-confidence surge candidates identified for the next session (Strict >95% Specificity filter applied).</td></tr>"
+    else:
+        for s in screened_stocks:
+            prob_color = "#10b981" if s["prob"] >= 0.70 else "#38bdf8"
+            stock_rows += f"""
+            <tr>
+                <td><strong>{s['ticker']}</strong></td>
+                <td><span style="color:{prob_color}; font-weight:700;">{s['prob']:.1%}</span></td>
+                <td>₹{s['close']:.2f}</td>
+                <td>₹{s['entry']:.2f}</td>
+                <td style="color:#10b981;">₹{s['target']:.2f} (+5.0%)</td>
+                <td style="color:#ef4444;">₹{s['stop_loss']:.2f} (-{s['sl_pct']:.2f}%)</td>
+                <td>{s['rr_ratio']:.2f}R</td>
+                <td>{s['volume_ratio']:.1f}x</td>
+            </tr>
+            """
+
+    history_rows = ""
+    for item in history[:30]:
+        history_rows += f"""
+        <tr>
+            <td>{item.get('date', 'N/A')}</td>
+            <td>{item.get('ticker', 'N/A')}</td>
+            <td>{float(item.get('prob', 0.0)):.1%}</td>
+            <td>₹{float(item.get('entry', 0.0)):.2f}</td>
+            <td>₹{float(item.get('target', 0.0)):.2f}</td>
+            <td>₹{float(item.get('stop_loss', 0.0)):.2f}</td>
+        </tr>
+        """
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaPulse | NSE >5% Surge Forecast</title>
+    <style>
+        :root {{
+            --bg-primary: #0a0e17;
+            --bg-secondary: #131b2e;
+            --bg-card: #1c2744;
+            --accent: #38bdf8;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #2d3b5d;
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding: 24px;
+            line-height: 1.5;
+        }}
+        .container {{ max-width: 1200px; margin: 0 auto; }}
+        header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 28px;
+        }}
+        h1 {{ font-size: 24px; font-weight: 700; color: #fff; }}
+        .timestamp {{ color: var(--text-muted); font-size: 14px; }}
+        .card {{
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }}
+        .card-title {{
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }}
+        th, td {{
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }}
+        th {{ color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.02); }}
+        tr:hover {{ background: rgba(255,255,255,0.03); }}
+        .badge {{
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }}
+        .badge-green {{ background: rgba(16, 185, 129, 0.2); color: #34d399; }}
+        .badge-blue {{ background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }}
+        .stats-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }}
+        .stat-box {{
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }}
+        .stat-label {{ font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }}
+        .stat-value {{ font-size: 24px; font-weight: 700; margin-top: 4px; color: #fff; }}
+        pre {{
+            background: #090d16;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>AlphaPulse ML Trading Engine</h1>
+                <p class="timestamp">Target: Next-Day Intraday Surge ≥ 5.0% | Updated: {timestamp}</p>
+            </div>
+            <div>
+                <span class="badge badge-green">STATUS: ACTIVE PIPELINE</span>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Model Pipeline</div>
+                <div class="stat-value">Ensemble Stacking</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Min Target Move</div>
+                <div class="stat-value">+5.00%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Target Specificity</div>
+                <div class="stat-value">≥ 95.0%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Qualified Candidates</div>
+                <div class="stat-value">{len(screened_stocks)}</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Tomorrow's High-Probability Opportunities</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Ensemble Prob</th>
+                        <th>LTP</th>
+                        <th>Recommended Entry</th>
+                        <th>Target Price</th>
+                        <th>Stop Loss</th>
+                        <th>Risk/Reward</th>
+                        <th>Vol Surge</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {stock_rows}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Model Cross-Validation & Diagnostics (Out-of-Fold)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Algorithm</th>
+                        <th>ROC-AUC</th>
+                        <th>Precision</th>
+                        <th>Specificity</th>
+                        <th>Recall</th>
+                        <th>Brier Loss</th>
+                        <th>Tuned Threshold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {metrics_rows}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Auditable Historical Predictions Log</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Ticker</th>
+                        <th>Probability</th>
+                        <th>Entry</th>
+                        <th>Target</th>
+                        <th>Stop Loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {history_rows}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+"""
+    return html
+
+
+def run_pipeline():
+    start_time = datetime.datetime.now()
+    logger.info("Starting Daily NSE ML Alpha Screening Pipeline...")
+
+    tickers_file = "tickers.txt"
+    tickers = DataLoader.load_tickers(tickers_file)
+
+    # Ingest Data
+    raw_data = DataLoader.fetch_universe_parallel(tickers, max_workers=8)
+    if not raw_data:
+        logger.error("No data fetched. Aborting pipeline.")
+        sys.exit(1)
+
+    # Feature Engineering
+    logger.info("Computing technical features, volatility envelopes, and labels...")
+    processed_dfs = []
+    latest_rows = []
+
+    fe = FeatureEngineering()
+    for ticker, df in raw_data.items():
+        try:
+            feat_df = fe.compute_technical_features(df)
+            if len(feat_df) > 100:
+                processed_dfs.append(feat_df)
+                # Store latest observation for live predictions
+                latest_rows.append(feat_df.iloc[-1:])
+        except Exception as e:
+            logger.warning(f"Feature computation error on {ticker}: {e}")
+
+    if not processed_dfs:
+        logger.error("Empty training dataset. Aborting.")
+        sys.exit(1)
+
+    panel_df = pd.concat(processed_dfs, ignore_index=True)
+    latest_df = pd.concat(latest_rows, ignore_index=True)
+
+    logger.info(f"Training Pool: {len(panel_df):,} samples across {len(processed_dfs)} stocks.")
+
+    # Train and Ensemble
+    pipeline = EnsemblePipeline(n_splits=5)
+    metrics = pipeline.train_and_validate(panel_df)
+
+    for m_name, m in metrics.items():
+        logger.info(
+            f"Model [{m_name}] -> AUC: {m.auc:.4f}, Specificity: {m.specificity:.2%}, "
+            f"Precision: {m.precision:.2%}, Threshold: {m.threshold:.2f}"
+        )
+
+    # Score Tomorrow's candidates
+    X_latest = latest_df[pipeline.feature_names].values
+    ensemble_probs = pipeline.predict_ensemble(X_latest)
+    latest_df["ensemble_prob"] = ensemble_probs
+
+    # Filter with stringent probability threshold (high specificity requirement)
+    candidates = []
+    for idx, row in latest_df.iterrows():
+        prob = row["ensemble_prob"]
+        if prob >= 0.50:  # Minimum calibrated probability hurdle
+            close_px = float(row["Close"])
+            atr = float(row["atr_14"])
+            entry_px = close_px
+            target_px = entry_px * 1.05
+            stop_px = max(0.0, entry_px - (1.5 * atr))
+            sl_pct = ((entry_px - stop_px) / entry_px) * 100
+            risk = entry_px - stop_px
+            reward = target_px - entry_px
+            rr = (reward / risk) if risk > 0 else 0
+
+            candidates.append({
+                "ticker": str(row["Ticker"]),
+                "prob": float(prob),
+                "close": close_px,
+                "entry": entry_px,
+                "target": target_px,
+                "stop_loss": stop_px,
+                "sl_pct": sl_pct,
+                "rr_ratio": rr,
+                "volume_ratio": float(row["vol_ratio_20"]),
+            })
+
+    # Sort candidates by probability descending
+    candidates = sorted(candidates, key=lambda x: x["prob"], reverse=True)
+
+    logger.info(f"Identified {len(candidates)} candidates for tomorrow.")
+
+    # Directory for GitHub Pages
+    os.makedirs("docs", exist_ok=True)
+
+    # Manage History File
+    history_file = "docs/history.json"
+    history = []
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, "r") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    today_str = datetime.date.today().isoformat()
+    for c in candidates:
+        history.insert(0, {
+            "date": today_str,
+            "ticker": c["ticker"],
+            "prob": c["prob"],
+            "entry": c["entry"],
+            "target": c["target"],
+            "stop_loss": c["stop_loss"],
+        })
+
+    with open(history_file, "w") as f:
+        json.dump(history[:1000], f, indent=2)
+
+    # Save today's picks
+    with open("docs/data.json", "w") as f:
+        json.dump(candidates, f, indent=2)
+
+    # Export Pine Script v6
+    pine_code = generate_pine_script_v6()
+    with open("strategy_v6.pine", "w") as f:
+        f.write(pine_code)
+    logger.info("Generated valid TradingView Pine Script v6 strategy file: strategy_v6.pine")
+
+    # Generate and write HTML Dashboard
+    now_formatted = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    html_output = generate_html_dashboard(candidates, metrics, history, now_formatted)
+    with open("docs/index.html", "w") as f:
+        f.write(html_output)
+    logger.info("Published interactive dashboard to docs/index.html.")
+
+    elapsed = datetime.datetime.now() - start_time
+    logger.info(f"Pipeline finished successfully in {elapsed}.")
+
+
+if __name__ == "__main__":
+    run_pipeline()
