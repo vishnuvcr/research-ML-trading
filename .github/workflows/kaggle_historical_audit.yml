@@ -1,0 +1,65 @@
+name: Kaggle Historical Data Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_nifty100:
+        description: Download NIFTY-100 5-minute stock dataset (~5 GB)
+        required: true
+        default: true
+        type: boolean
+      run_indices:
+        description: Download NIFTY index/VIX minute dataset
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt kagglehub pandas
+      - name: Download NIFTY-100 5-minute data
+        if: ${{ inputs.run_nifty100 }}
+        run: |
+          python - <<'PY'
+          import kagglehub
+          p = kagglehub.dataset_download('debashis74017/stock-market-data-nifty-100-stocks-5-min-data')
+          print(p)
+          with open('/tmp/nifty100_path', 'w') as f: f.write(p)
+          PY
+      - name: Download NIFTY indices and VIX minute data
+        if: ${{ inputs.run_indices }}
+        run: |
+          python - <<'PY'
+          import kagglehub
+          p = kagglehub.dataset_download('debashis74017/nifty-50-minute-data')
+          print(p)
+          with open('/tmp/index_path', 'w') as f: f.write(p)
+          PY
+      - name: Audit datasets
+        run: |
+          roots=()
+          if [ -f /tmp/nifty100_path ]; then roots+=("$(cat /tmp/nifty100_path)"); fi
+          if [ -f /tmp/index_path ]; then roots+=("$(cat /tmp/index_path)"); fi
+          if [ ${#roots[@]} -eq 0 ]; then echo 'No dataset selected'; exit 1; fi
+          python src/kaggle_data_audit.py --roots "${roots[@]}" --output docs/kaggle_data_manifest.json
+      - name: Commit manifest
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/kaggle_data_manifest.json
+          git diff --cached --quiet || git commit -m 'Audit Kaggle historical intraday datasets'
+          git push
