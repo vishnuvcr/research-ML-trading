@@ -4,7 +4,7 @@ max_symbols: 200
 
 data:
   daily_period: 5y
-  # yfinance intraday is limited to recent history. Keep 60d for live/research snapshots.
+  # yfinance intraday is limited to recent history. Historical research should use Kaggle/local CSV.
   intraday_source: yfinance
   intraday_csv_dir: data/intraday
   intraday_period: 60d
@@ -12,6 +12,10 @@ data:
   market_ticker: ^NSEI
   min_daily_history: 300
   min_intraday_bars: 500
+  kaggle:
+    nifty100_5m: debashis74017/stock-market-data-nifty-100-stocks-5-min-data
+    nifty_indices_minute: debashis74017/nifty-50-minute-data
+    nifty50_stocks_daily: siddharthhirvaniya/nifty-50-stocks-data-01-jan-2015-to-01-sept-2026
 
 model:
   random_state: 42
