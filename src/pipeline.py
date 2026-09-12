@@ -74,7 +74,7 @@ class PurgedEmbargoTimeSeriesSplit:
             train_dates = unique_dates[:train_end_idx]
             val_dates = unique_dates[val_start_idx:val_end_idx]
 
-            # Map unique dates back to original panel indices (bracket-free)
+            # Map unique dates back to original panel indices
             train_idx = np.flatnonzero(dates.isin(train_dates))
             val_idx = np.flatnonzero(dates.isin(val_dates))
 
@@ -239,7 +239,7 @@ class FeatureEngineering:
         o = df["Open"]
         v = df["Volume"]
 
-        # Multi-horizon log returns (Tuple prevents bracket-stripping)
+        # Multi-horizon log returns
         for lag in (1, 2, 3, 5, 10, 21):
             df[f"ret_{lag}"] = np.log(c / c.shift(lag))
 
@@ -350,7 +350,8 @@ class EnsemblePipeline:
                 X_val_s = s.transform(X_val)
 
                 model.fit(X_train_s, y_train)
-                probs = model.predict_proba(X_val_s)
+                # Fixed: extract positive class probability into 1D array
+                probs = np.take(model.predict_proba(X_val_s), 1, axis=1)
 
                 oof_preds[val_idx] = probs
                 oof_targets[val_idx] = y_val
@@ -397,7 +398,8 @@ class EnsemblePipeline:
         total_weight = 0.0
 
         for name, model in self.models.items():
-            prob = model.predict_proba(X_scaled)
+            # Fixed: extract positive class probability into 1D array
+            prob = np.take(model.predict_proba(X_scaled), 1, axis=1)
             weight = 1.3 if "LGBM" in name else 1.2 if "XGB" in name else 1.0
             ensemble_prob += prob * weight
             total_weight += weight
