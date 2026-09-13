@@ -1,0 +1,116 @@
+name: ML Historical Backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_symbols:
+        description: 'Maximum symbols to backtest'
+        required: false
+        default: '200'
+      data_source:
+        description: 'Intraday source: yfinance (recent) or csv (historical files already present in data/intraday)'
+        required: false
+        default: 'yfinance'
+        type: choice
+        options:
+          - yfinance
+          - csv
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ml-historical-backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate configuration
+        env:
+          MAX_SYMBOLS: ${{ inputs.max_symbols }}
+          DATA_SOURCE: ${{ inputs.data_source }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, yaml
+          p = pathlib.Path('config/trading.yaml')
+          cfg = yaml.safe_load(p.read_text())
+          n = int(os.environ['MAX_SYMBOLS'])
+          if n < 1:
+              raise SystemExit('max_symbols must be >= 1')
+          src = os.environ['DATA_SOURCE'].lower()
+          if src not in {'yfinance', 'csv'}:
+              raise SystemExit('data_source must be yfinance or csv')
+          print('symbols:', n)
+          print('intraday source:', src)
+          print('intraday backtest days:', cfg['backtest']['intraday_days'])
+          print('BTST backtest days:', cfg['backtest']['btst_days'])
+          print('stop mode:', cfg['execution']['stop_mode'])
+          print('target mode:', cfg['execution']['target_mode'])
+          PY
+
+      - name: Run ML backtest
+        env:
+          MAX_SYMBOLS: ${{ inputs.max_symbols }}
+          DATA_SOURCE: ${{ inputs.data_source }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, yaml, subprocess
+          p = pathlib.Path('config/trading.yaml')
+          cfg = yaml.safe_load(p.read_text())
+          cfg['max_symbols'] = int(os.environ['MAX_SYMBOLS'])
+          cfg['data']['intraday_source'] = os.environ['DATA_SOURCE'].lower()
+          # Keep the committed configuration unchanged; use a CI-only copy.
+          ci = pathlib.Path('/tmp/trading-ci.yaml')
+          ci.write_text(yaml.safe_dump(cfg, sort_keys=False))
+          subprocess.run(['python', 'src/ml_intraday_btst.py', '--config', str(ci)], check=True)
+          PY
+
+      - name: Show backtest artifacts
+        run: |
+          echo '=== docs/backtest.json ==='
+          cat docs/backtest.json || true
+          echo
+          echo '=== docs/data.json ==='
+          cat docs/data.json || true
+          echo
+          echo '=== docs/signals.csv (head) ==='
+          head -20 docs/signals.csv || true
+
+      - name: Upload backtest artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-backtest-${{ github.run_number }}
+          path: |
+            docs/backtest.json
+            docs/data.json
+            docs/history.json
+            docs/signals.csv
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit generated artifacts
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/backtest.json docs/data.json docs/history.json docs/signals.csv
+          if git diff --cached --quiet; then
+            echo 'No artifact changes to commit.'
+          else
+            git commit -m 'Update ML historical backtest artifacts'
+            git push
+          fi
