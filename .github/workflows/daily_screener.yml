@@ -8,11 +8,10 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
+  actions: read
 
 concurrency:
-  group: 'pages'
+  group: 'daily-screener'
   cancel-in-progress: true
 
 jobs:
@@ -40,18 +39,17 @@ jobs:
       - name: Commit and Push Logs & Artifacts
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/data.json docs/history.json strategy_v6.pine
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto: Update daily forecast and history [$(date -u '+%Y-%m-%d %H:%M') UTC]" && git push)
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload Screener Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          path: './docs'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          name: daily-screener-${{ github.run_number }}
+          path: |
+            docs/data.json
+            docs/history.json
+            strategy_v6.pine
+          if-no-files-found: warn
+          retention-days: 14
