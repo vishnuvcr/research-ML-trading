@@ -1,0 +1,12 @@
+{
+  "program":"NIFTY_50_CPR_MARKET_EFFECTIVENESS",
+  "protocol_version":"1.1.0",
+  "overall_status":"PROTOCOL_READY",
+  "active_phase":"phase-00-protocol",
+  "last_updated":"2026-09-19",
+  "primary_endpoint":null,
+  "data_version":null,
+  "cost_model_version":"1.0.0",
+  "results":[],
+  "open_scientific_blockers":["Paytm Money public F&O brokerage wording requires dated applicable-rate resolution before affected cost-sensitive conclusions."]
+}
