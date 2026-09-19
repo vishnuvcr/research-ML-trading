@@ -1,0 +1,101 @@
+name: Research Initiation - CPR NIFTY Market Effectiveness
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_initiation:
+        description: Start the governed research sequence
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  phase-00:
+    if: inputs.confirm_initiation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/phase-00-protocol
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt -r requirements-research.txt
+      - run: python scripts/research/preflight.py --phase phase-00-protocol --branch research/phase-00-protocol
+      - run: python scripts/research/phase_runner.py --phase phase-00-protocol
+      - run: |
+          python scripts/research/record_step.py --phase phase-00-protocol --step automatic_initiation --status READY --summary "Automatic research initiation passed protocol preflight."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/STATUS.json research/RUN_LOG.jsonl
+          git diff --cached --quiet || (git commit -m "Research: automatic initiation phase 00" && git push origin research/phase-00-protocol)
+
+  phase-01:
+    needs: phase-00
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/phase-01-data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt -r requirements-research.txt
+      - run: python scripts/research/preflight.py --phase phase-01-data --branch research/phase-01-data
+      - run: python scripts/research/phase_runner.py --phase phase-01-data
+      - run: |
+          python scripts/research/record_step.py --phase phase-01-data --step automatic_sequence --status READY --summary "Automatic sequence passed the data-phase scaffold gate."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/STATUS.json research/RUN_LOG.jsonl data/
+          git diff --cached --quiet || (git commit -m "Research: automatic sequence phase 01" && git push origin research/phase-01-data)
+
+  phase-02:
+    needs: phase-01
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/phase-02-features
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt -r requirements-research.txt
+      - run: python scripts/research/preflight.py --phase phase-02-features --branch research/phase-02-features
+      - run: python scripts/research/phase_runner.py --phase phase-02-features
+      - run: |
+          python scripts/research/record_step.py --phase phase-02-features --step automatic_sequence --status READY --summary "Automatic sequence passed the feature-phase scaffold gate."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/STATUS.json research/RUN_LOG.jsonl data/
+          git diff --cached --quiet || (git commit -m "Research: automatic sequence phase 02" && git push origin research/phase-02-features)
+
+  phase-03:
+    needs: phase-02
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/phase-03-backtest
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt -r requirements-research.txt
+      - run: python scripts/research/preflight.py --phase phase-03-backtest --branch research/phase-03-backtest
+      - name: Cost-gated backtest
+        run: python scripts/research/phase_runner.py --phase phase-03-backtest
+      - name: Fail closed and log blocker
+        if: failure()
+        run: |
+          python scripts/research/record_step.py --phase phase-03-backtest --step automatic_sequence --status BLOCKED --summary "Automatic sequence halted at Phase 03." --error "Backtest implementation/cost profile is not yet validated; no result was generated."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/STATUS.json research/RUN_LOG.jsonl research/ERROR_LOG.md
+          git diff --cached --quiet || (git commit -m "Research: automatic sequence halted at phase 03" && git push origin research/phase-03-backtest)
+          exit 1
+
+  # Phase 04-07 intentionally require successful upstream jobs.
