@@ -1,0 +1,52 @@
+version: "1.0.0"
+as_of: "2026-09-19"
+broker: "Paytm Money"
+policy:
+  fail_closed_on_conflicting_official_sources: true
+  use_trade_date_effective_schedule_when_known: true
+  otherwise_run_cost_sensitivity: true
+  never_assume_zero_cost: true
+sources:
+  pricing_page: "https://www.paytmmoney.com/stocks/pricing"
+  brokerage_calculator: "https://www.paytmmoney.com/stocks/brokerage-calculator"
+  pricing_update_2025: "https://www.paytmmoney.com/blog/all-new-paytm-money-updates-revisions-and-more/"
+brokerage:
+  equity_cash:
+    per_executed_order_inr: null
+    pct_turnover: null
+  futures:
+    per_executed_order_inr: null
+    pct_turnover: null
+  options:
+    per_executed_order_inr: null
+    pct_premium_or_turnover: null
+statutory:
+  stt_pct: null
+  exchange_transaction_pct: null
+  sebi_turnover_fee_pct: null
+  gst_pct: null
+  stamp_duty_pct: null
+depository:
+  delivery_sale_dp_charge_inr: null
+execution:
+  slippage_model: "bps_of_notional"
+  base_slippage_bps: null
+  adverse_slippage_multiplier_scenarios: [1.0, 1.5, 2.0]
+  latency:
+    enabled: true
+    bars_or_seconds: 1
+    scenario_set: [0, 1, 2]
+  spread:
+    enabled: true
+    model: "proxy_or_observed_when_available"
+funding:
+  mtf_enabled: false
+  annual_interest_pct: null
+  daily_accrual: true
+validation:
+  status: "PENDING_OFFICIAL_CURRENT_PROFILE"
+  blocking_reason: "Populate exact applicable Paytm Money charges before cost-sensitive inference."
+notes:
+  - "Official material states that pricing is subject to change."
+  - "Cache the dated cost profile used by every research run."
+  - "Public material currently exposes conflicting or legacy F&O brokerage wording; resolve before F&O conclusions."
