@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research Control Center</title>
+<style>body{font-family:system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:0 20px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;text-align:left}.card{border:1px solid #ddd;border-radius:10px;padding:16px;margin:16px 0}</style>
+</head><body>
+<h1>Research Control Center</h1>
+<div class="card">
+<b>Program:</b> NIFTY 50 / CPR Market Effectiveness<br>
+<b>Protocol:</b> 1.1.0<br>
+<b>Status:</b> PROTOCOL_READY<br>
+<b>Primary rule:</b> NIFTY 50 close above CPR top -> long NIFTYBEES next session open-to-close; otherwise cash.<br>
+<b>Open blocker:</b> Paytm Money cost profile for affected F&O analyses.
+</div>
+<div class="card"><h2>Phase status</h2>
+<table><tr><th>Phase</th><th>Status</th></tr>
+<tr><td>00 Protocol</td><td>READY</td></tr>
+<tr><td>01 Data</td><td>BLOCKED until initiated</td></tr>
+<tr><td>02 Features</td><td>BLOCKED until validated Phase 01 data</td></tr>
+<tr><td>03 Backtest</td><td>BLOCKED by cost/data gate</td></tr>
+<tr><td>04 Robustness</td><td>BLOCKED until Phase 03</td></tr>
+<tr><td>05 Statistics</td><td>BLOCKED until Phase 04</td></tr>
+<tr><td>06 Manuscript</td><td>BLOCKED until Phase 05</td></tr>
+<tr><td>07 Audit</td><td>BLOCKED until Phase 06</td></tr>
+</table></div>
+<div class="card"><h2>Machine-readable status</h2><a href="./research_status.json">research_status.json</a></div>
+</body></html>
