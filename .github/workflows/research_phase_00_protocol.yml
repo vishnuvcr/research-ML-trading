@@ -1,0 +1,52 @@
+name: Research Phase 00 - Protocol
+
+on:
+  workflow_dispatch:
+    inputs:
+      research_branch:
+        description: Branch containing the phase implementation
+        required: true
+        default: research/phase-00-protocol
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout phase branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.research_branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-research.txt
+
+      - name: Preflight
+        run: python scripts/research/preflight.py --phase phase-00-protocol --branch "${{ inputs.research_branch }}"
+
+      - name: Record protocol phase
+        run: |
+          python scripts/research/record_step.py --phase phase-00-protocol --step protocol_preflight --status READY --summary "Protocol and repository governance validated."
+
+      - name: Build Pages
+        run: python scripts/research/build_pages.py
+
+      - name: Commit research status
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/STATUS.json research/RUN_LOG.jsonl docs/
+          git diff --cached --quiet || (git commit -m "Research: phase 00 protocol status" && git push origin "${{ inputs.research_branch }}")
