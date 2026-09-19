@@ -1,0 +1,18 @@
+{
+  "program":"NIFTY_50_CPR_MARKET_EFFECTIVENESS",
+  "protocol_version":"1.0.0",
+  "last_updated":"2026-09-19",
+  "overall_status":"PROTOCOL_READY",
+  "active_phase":"phase-00-protocol",
+  "phases":{
+    "phase-00-protocol":{"status":"READY","last_step":"governance_baseline"},
+    "phase-01-data":{"status":"BLOCKED","last_step":null},
+    "phase-02-features":{"status":"BLOCKED","last_step":null},
+    "phase-03-backtest":{"status":"BLOCKED","last_step":null},
+    "phase-04-robustness":{"status":"BLOCKED","last_step":null},
+    "phase-05-statistics":{"status":"BLOCKED","last_step":null},
+    "phase-06-manuscript":{"status":"BLOCKED","last_step":null},
+    "phase-07-audit":{"status":"BLOCKED","last_step":null}
+  },
+  "results":{"primary_endpoint":null,"secondary_endpoints":[],"inferences":[],"conclusion":null}
+}
