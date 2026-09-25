@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "ticker": "MEDICO.NS",
+    "prob": 0.5633723794959257,
+    "close": 26.0,
+    "entry": 26.0,
+    "target": 27.3,
+    "stop_loss": 21.990714073181152,
+    "sl_pct": 15.420330487764799,
+    "max_shares": 30293,
+    "max_capital_lakhs": 7.87618,
+    "volume_ratio": 5.836678259402741
+  }
+]

@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-09-25",
+    "ticker": "MEDICO.NS",
+    "prob": 0.5633723794959257,
+    "entry": 26.0,
+    "target": 27.3,
+    "stop_loss": 21.990714073181152,
+    "regime": "NORMAL VOLATILITY"
+  },
+  {
     "date": "2026-09-15",
     "ticker": "AEROENTER.NS",
     "prob": 0.5469101783156326,
