@@ -3,7 +3,7 @@ strategy("Ensemble 5%+ Alpha Momentum Strategy [v6 - ML4T]",
          overlay=true, 
          initial_capital=100000, 
          default_qty_type=strategy.percent_of_equity, 
-         default_qty_value=18.0, 
+         default_qty_value=15.0, 
          commission_type=strategy.commission.percent, 
          commission_value=0.03, 
          slippage=1)
