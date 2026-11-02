@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-11-02",
+    "ticker": "BUILDPRO.NS",
+    "prob": 0.5457366986361583,
+    "entry": 175.1999969482422,
+    "target": 183.9599967956543,
+    "stop_loss": 149.6571388244629,
+    "regime": "LOW VOLATILITY (Risk-On)"
+  },
+  {
+    "date": "2026-11-02",
+    "ticker": "DMCC.NS",
+    "prob": 0.5627795918534779,
+    "entry": 254.10000610351562,
+    "target": 266.80500640869144,
+    "stop_loss": 221.28215190342496,
+    "regime": "LOW VOLATILITY (Risk-On)"
+  },
+  {
     "date": "2026-09-25",
     "ticker": "MEDICO.NS",
     "prob": 0.5633723794959257,
